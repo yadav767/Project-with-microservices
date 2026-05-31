@@ -31,6 +31,10 @@ const registerUserValidation = [
         .withMessage("Last name must be string.")
         .notEmpty()
         .withMessage("Last name is required."),
+    body("role")
+        .optional()
+        .isIn(["user", "seller"])
+        .withMessage("Role must be either user or seller."),    
 
     responseWithValidationErrors
 ]
@@ -56,4 +60,36 @@ const loginUserValidation = [
 
 ]
 
-export default { registerUserValidation, loginUserValidation }
+const addUserAddressValidation=[
+    body('street')
+        .isString()
+        .withMessage("Street must be string !")
+        .notEmpty()
+        .withMessage("Steet is required !"),
+    body("city")
+        .isString()
+        .withMessage("City is required !")
+        .notEmpty()
+        .withMessage("City is required !"),
+    body("state")
+        .isString()
+        .withMessage("State must be string !")
+        .notEmpty() 
+        .withMessage("State is required !"),
+    body("country")
+        .isString()     
+        .withMessage("Country must be string !")
+        .notEmpty()
+        .withMessage("Country is required !"),
+    body("pincode")
+        .isString()
+        .withMessage("Pincode must be string !")
+        .notEmpty()
+        .withMessage("Pincode is required !"),
+    body("isDefault")
+        .optional()
+        .isBoolean()
+        .withMessage("isDefault must be boolean !"),
+    responseWithValidationErrors
+]
+export default { registerUserValidation, loginUserValidation ,addUserAddressValidation }

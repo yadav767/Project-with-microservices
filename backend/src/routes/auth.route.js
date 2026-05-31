@@ -1,7 +1,7 @@
 import { Router } from "express";
 import authController from '../controllers/auth.controller.js'
 import validators from "../middlewares/validator.middleware.js"
-import authMiddleware from "../middlewares/auth.middleware.js";
+import authMiddleware from "../middlewares/auth.middleware.js"
 
 const authRoute = Router()
 
@@ -16,5 +16,14 @@ authRoute.get("/me", authMiddleware.authMiddleware, authController.getMeControll
 
 //Logout
 authRoute.get("/logout",authController.logoutUserController)
+
+//Get address
+authRoute.get("/users/me/addressess",authMiddleware.authMiddleware,authController.getUserAdressess)
+
+//Add new address
+authRoute.post("/users/me/addressess",validators.addUserAddressValidation,authMiddleware.authMiddleware,authController.addNewAddress)
+
+//Delete an address
+authRoute.post("/users/me/addressess/:addressId",authMiddleware.authMiddleware,authController.deleteUserAddress)
 
 export default authRoute
