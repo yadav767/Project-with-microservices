@@ -5,7 +5,7 @@ import mongoose from 'mongoose'
 
 async function createProduct(req, res) {
     try {
-        const { title, description, priceAmount, priceCurrency = 'INR' } = req.body
+        const { title, description, priceAmount, priceCurrency = 'INR', stock } = req.body
         const seller = req.user.id
         const price = {
             amount: Number(priceAmount),
@@ -16,7 +16,7 @@ async function createProduct(req, res) {
 
         console.log(images);
         const product = await productModel.create({
-            title, description, price, seller, images
+            title, description, price, seller, images, stock:Number(stock)
         })
 
         return res.status(201).json({
