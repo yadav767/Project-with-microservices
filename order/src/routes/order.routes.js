@@ -12,5 +12,18 @@ orderRoute.post("/",
     orderController.createOrder
 )
 
+orderRoute.get("/me",createAuthMiddleware(["user"]),orderController.getMyOrders)
+
+
+orderRoute.get("/:id",createAuthMiddleware(["user","admin"]),orderController.getMyOrderById)
+
+orderRoute.post("/:id/cancel",createAuthMiddleware(["user"]),orderController.cancelOrderById)
+
+orderRoute.patch("/:id/address",
+    createAuthMiddleware(["user"]),
+    validationMiddleware.updateOrderValidation,
+    orderController.updateOrderAddress
+)
+
 
 export default orderRoute

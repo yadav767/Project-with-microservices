@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import orderModel from "../models/order.model.js";
 import axios from "axios";
 
@@ -49,15 +50,15 @@ async function createOrder(req, res) {
             user: user.id,
             items: orderItem,
             status: "PENDING",
-            totalAmount:{
-                amount:totalPrice,
-                currency:"INR"
+            totalAmount: {
+                amount: totalPrice,
+                currency: "INR"
             },
-            shippingAddress:req.body.shippingAddress
+            shippingAddress: req.body.shippingAddress
         })
 
         res.status(200).json({
-            message:"Order created successfully !",
+            message: "Order created successfully !",
             order
         })
 
@@ -72,6 +73,185 @@ async function createOrder(req, res) {
 }
 
 
+async function getMyOrders(req, res) {
+    const user = req.user
+    const page = parseInt(req.query.page) || 1
+    const limit = parseInt(req.query.limit) || 10
+    const skip = (page - 1) * limit
+    try {
+
+        const order = await orderModel.find({ user: user.id })
+        const totalOrder = await orderModel.countDocuments({ user: user.id })
+
+        if (!order || totalOrder === 0) {
+            return res.status(404).json({
+                message: "No orders found for the user !"
+            })
+        }
+
+        res.status(200).json({
+            message: "Orders fetched successfully !",
+            order,
+            meta: {
+                total: totalOrder,
+                page,
+                limit
+            }
+        })
 
 
-export default { createOrder }
+    } catch (error) {
+        res.status(500).json({
+            message: "Failed to fetch all the orders from the DB !",
+            error
+        })
+    }
+}
+
+
+async function getMyOrderById(req, res) {
+    try {
+        const userId = req.user.id;
+        const orderId = req.params.id
+
+        if (!mongoose.Types.ObjectId.isValid(orderId)) {
+            return res.status(400).json({
+                message: "Invalid order id !"
+            })
+        }
+
+        const order = await orderModel.findById(orderId)
+
+        if (order.user.toString() != userId) {
+            res.status(403).json({
+                message: "Forbidden : You are not authorized to access this order !"
+            })
+        }
+        res.status(200).json({
+            message: "Order fetched successfully !",
+            order
+        })
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Failed to fetch the order from the DB !",
+            error
+        })
+    }
+}
+
+async function cancelOrderById(req, res) {
+    try {
+        const userId = req.user.id
+        const orderId = req.params.id
+        if (!mongoose.Types.ObjectId.isValid(orderId)) {
+            return res.status(400).json({
+                message: "Invalid order ID !"
+            })
+        }
+
+        const order = await orderModel.findById(orderId)
+
+        if (!order) {
+            return res.status(404).json({
+                message: "Order not found !"
+            })
+        }
+
+        if (order.user.toString() != userId) {
+            return res.status(403).json({
+                message: "Forbidden this is not you order !"
+            })
+        }
+
+        if(order.status != "PENDING" || order.status != "CONFIRMED"){
+            return res.status(400).json({
+                message: "Order cannot be cancelled as it is already processed !"
+            })
+        }
+
+        order.status = "CANCELLED"
+
+        await order.save()
+
+        res.status(200).json({
+            message: "Order cancelled successfully !",
+            order
+        })
+    } catch (error) {
+        res.status(500).json({
+            message: "Failed to cancel the order !",
+            error
+        })
+    }
+}
+
+async function updateOrderAddress(req,res){
+    try {
+        const userId = req.user.id
+         const orderId = req.params.id
+
+        if(! mongoose.Types.ObjectId.isValid(orderId)){
+            return res.status(400).json({
+                message:"Invalid order ID !"
+            })
+        }
+
+        const order = await orderModel.findById(orderId)
+
+        if(!order){
+            return res.status(404).json({
+                message:"Order not found !"
+            })
+        }
+
+        if(order.user.toString() != userId){
+            return res.status(403).json({
+                message:"Forbidden : you don't have access to update address !"
+            })
+        }
+
+        if(order.status != "PENDING" || order.status != "CONFIRMED"){
+            if(order.status === "SHIPPED"){
+                return res.status(400).json({
+                    message:"Cannot update address — order is already shipped"
+                })
+            }
+            if(order.status === "DELIVERED"){
+                return res.status(400).json({
+                    message:"Cannot update address — order is already delivered"
+                })
+            }
+            if(order.status === "CANCELLED"){
+                return res.status(400).json({
+                    message:"Cannot update address — order is already cancelled"
+                })
+            }
+        }
+
+        order.shippingAddress = {
+            street : req.body.shippingAddress.street,
+            city : req.body.shippingAddress.city,
+            state : req.body.shippingAddress.state,
+            pincode : req.body.shippingAddress.pincode,
+            country : req.body.shippingAddress.country
+        }
+        await order.save()
+
+        res.status(200).json({
+            message:"Shipping address updated successfully !",
+            order
+        })
+
+    } catch (error) {
+        res.status(500).json({
+            message:"Failed to upadate the shippingaddress !",
+            error
+        })
+    }
+}
+
+
+
+
+export default { createOrder, getMyOrders, getMyOrderById, cancelOrderById, updateOrderAddress }

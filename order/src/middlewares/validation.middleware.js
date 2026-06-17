@@ -37,4 +37,39 @@ const createOrderValidation = [
         .withMessage("Pincode is required !"),
     responseWithValidationErrors
 ]
-export default { createOrderValidation }
+
+const updateOrderValidation = [
+    body("shippingAddress.street")
+        .optional()
+        .isString()
+        .withMessage("Street must be string !")
+        .notEmpty()
+        .withMessage("Steet is required !"),
+    body("shippingAddress.city")
+        .optional()
+        .isString()
+        .withMessage("City is required !")
+        .notEmpty()
+        .withMessage("City is required !"),
+    body("shippingAddress.state")
+        .optional()
+        .isString()
+        .withMessage("State must be string !")
+        .notEmpty()
+        .withMessage("State is required !"),
+    body("shippingAddress.country")
+        .optional()
+        .isString()
+        .withMessage("Country must be string !")
+        .notEmpty()
+        .withMessage("Country is required !"),
+    body("shippingAddress.pincode")
+        .optional()
+        .isString()
+        .withMessage("Pincode must be string !")
+        .notEmpty()
+        .withMessage("Pincode is required !"),
+    responseWithValidationErrors
+]
+
+export default { createOrderValidation, updateOrderValidation }
