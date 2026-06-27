@@ -1,55 +1,74 @@
 import { StateGraph, MessagesAnnotation } from '@langchain/langgraph';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
-import tools from './tools.js'
+import createTools from './tools.js'
 import { ToolMessage, AIMessage } from '@langchain/core/messages'
 
 const model = new ChatGoogleGenerativeAI({
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     temperature: 0.5,
-    apiKey:process.env.GEMINI_API_KEY
+    apiKey: process.env.GEMINI_API_KEY
 })
 
 
 const graph = new StateGraph(MessagesAnnotation)
     .addNode("tools", async (state, config) => {
 
-        const lastMessage = state.messages[ state.messages.length - 1 ]
+        const token = config.metadata.token
 
+        // Create tools with token injected via closure
+        const tools = createTools(token)
+
+        const lastMessage = state.messages[state.messages.length - 1]
         const toolsCall = lastMessage.tool_calls
 
         const toolCallResults = await Promise.all(toolsCall.map(async (call) => {
 
-            const tool = tools[ call.name ]
+            const tool = tools[call.name]
             if (!tool) {
                 throw new Error(`Tool ${call.name} not found`)
             }
-            const toolInput = call.args
 
-            console.log("Invoking tool:", call.name, "with input:", call)
 
-            const toolResult = await tool.func({ ...toolInput, token: config.metadata.token })
+            // No need to pass token - it's already in the closure
+            const toolResult = await tool.invoke(call.args)
 
-            return new ToolMessage({ content: toolResult, name: call.name })
+            return new ToolMessage({
+                content: toolResult,
+                name: call.name,
+                tool_call_id: call.id
+            })
 
         }))
 
-        state.messages.push(...toolCallResults)
+        return { messages: [...state.messages, ...toolCallResults] }
 
-        return state
     })
     .addNode("chat", async (state, config) => {
-        const response = await model.invoke(state.messages, { tools: [ tools.searchProduct, tools.addProductToCart ] })
+
+        const token = config.metadata.token
+
+        // Create tools with token to bind to model
+        const tools = createTools(token)
+        const toolsList = Object.values(tools)
+
+        // Bind tools to model properly
+        const modelWithTools = model.bindTools(toolsList)
+
+        const response = await modelWithTools.invoke(state.messages)
 
 
-        state.messages.push(new AIMessage({ content: response.text, tool_calls: response.tool_calls }))
-
-        return state
+        return {
+            messages: [...state.messages, new AIMessage({
+                content: response.content,
+                tool_calls: response.tool_calls
+            })]
+        }
 
     })
     .addEdge("__start__", "chat")
     .addConditionalEdges("chat", async (state) => {
 
-        const lastMessage = state.messages[ state.messages.length - 1 ]
+        const lastMessage = state.messages[state.messages.length - 1]
 
         if (lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
             return "tools"
@@ -61,8 +80,6 @@ const graph = new StateGraph(MessagesAnnotation)
     .addEdge("tools", "chat")
 
 
-
 const agent = graph.compile()
-
 
 export default agent

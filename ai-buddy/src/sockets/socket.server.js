@@ -30,7 +30,7 @@ async function initSocketServer(httpServer) {
 
 
     io.on("connection", (socket) => {
-        socket.on("message",async (data) => {
+        socket.on("message", async (data) => {
             const agentResponse = await agent.invoke({
                 messages: [
                     {
